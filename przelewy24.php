@@ -95,6 +95,7 @@ class Przelewy24 extends PaymentModule
             $this->registerHook('displayBeforeCarrier') &&
             $this->registerHook('displayOrderConfirmation') &&
             $this->registerHook('actionEmailAddAfterContent') &&
+            $this->registerHook('actionGetExtraMailTemplateVars') &&
             $this->registerHook('displayInvoiceLegalFreeText') &&
             $this->registerHook('displayAdminOrderLeft') &&
             $this->registerHook('displayAdminOrderMain') &&
@@ -204,7 +205,6 @@ class Przelewy24 extends PaymentModule
             (substr_count($params['template'], 'error') > 0)) {
             return $params;
         }
-        $extracharge = $this->getFloatExtraChange();
         $textToSearchFor = false !== strpos(
             $params['template_html'],
             '<tr class="conf_body">'
@@ -212,13 +212,21 @@ class Przelewy24 extends PaymentModule
         $emailHead = strstr($params['template_html'], $textToSearchFor, true);
         $emailFoot = strstr($params['template_html'], $textToSearchFor);
         if ($emailHead) {
-            $priceTotal = $cart->getOrderTotal(true, Cart::BOTH);
-            $priceTotal += $extracharge;
-            $priceTotal = Tools::displayPrice($priceTotal, $this->context->currency, false);
-            $emailFoot = str_replace("{total_paid}", $priceTotal, $emailFoot);
-            $params['template_html'] = $emailHead.$this->renderExtraChargeDataInMail($extracharge).$emailFoot;
+            $params['template_html'] = $emailHead . '{p24_extrachargeHTML}' . $emailFoot;
         }
+        
+        return $params;
+    }
 
+    public function hookActionGetExtraMailTemplateVars($params)
+    {   
+        if($params['template'] ==='order_conf'){
+            $orderID = Order::getByReference($params['template_vars']['{order_name}'])->getFirst()->id;
+            if (Validate::isLoadedObject(Przelewy24Extracharge::findOneByOrderId($orderID))) {
+                $extracharge = $this->getFloatExtraChange();
+                $params['extra_template_vars']['{p24_extrachargeHTML}'] = $this->renderExtraChargeDataInMail($extracharge);
+            }   
+        }
         return $params;
     }
 
