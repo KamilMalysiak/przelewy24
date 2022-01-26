@@ -69,7 +69,7 @@ class Przelewy24paymentStatusModuleFrontController extends ModuleFrontController
             }
 
             Context::getContext()->currency = Currency::getCurrencyInstance((int)$cart->id_currency);
-
+            Cache::store("p24_cart", $cart->id_customer );
             $orderId = $przelewy24ServicePaymentData->getFirstOrderId();
 
             $total = (float)$cart->getOrderTotal(true, Cart::BOTH);
